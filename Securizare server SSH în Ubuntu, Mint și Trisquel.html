@@ -1,0 +1,136 @@
+SSH (Secure Shell) este un instrument de rețea ce folosește criptarea și conceput pentru a permite utilizatorilor să se conecteze de la distanță și în siguranță la diferite tipuri de calculatoare dintr-o rețea.
+
+În urmă cu două săptămâni a fost publicat un articol despre cum se <a href="http://www.gnulinux.ro/configurarea-ssh-in-ubuntu-mint-si-trisquel/" target="_blank">configurează SSH-ul</a>, în articolul de astăzi este vorba despre cum se poate securiza SSH-ul.
+
+<span style="color: #ff0000;">Notă</span>: În acest tutorial se presupune că serverul SSH rulează distribuția Ubuntu 14.04 și pe mașina client este o distribuție GNU+Linux.
+<h2><strong>Instalarea SSH</strong></h2>
+În primul rând trebuie să actualizați sistemul și să instalați <strong>SSH-ul</strong>, dacă nu îl aveți instalate.
+<pre><code>sudo apt-get update
+sudo apt-get install openssh-server</code></pre>
+Pentru a instala clientul SSH pe mașina client (server) rulați comanda:
+<pre><code>sudo apt-get install openssh-client</code></pre>
+<h2><strong>Configurare SSH pentru autentificarea cu parolă</strong></h2>
+Există două metode de autentificare într-un server SSH:
+<ul>
+	<li>o metodă este autentificarea pe bază de parolă.</li>
+	<li>cealaltă metodă este autentificarea pe bază de cheie.</li>
+</ul>
+Autentificarea prin parolă este des folosită, ușor de utilizat și la fel de ușor de spart (dacă utilizatorul folosește o parolă slabă). Autentificare prin cheie SSH oferă o modalitate simplă și sigură pentru conectarea la un server și această metodă este recomandată tuturor utilizatorilor.
+
+Pe mașina client (server) creați directorul (în cazul în care nu există):
+<pre><code>mkdir -p ~/.ssh/</code></pre>
+Se generează cheia SSH pe mașina client
+<pre><code>cd ~/.ssh
+ssh-keygen -t rsa</code></pre>
+Apăsați tasta <strong>Enter</strong> la fiecare prompt. Acest lucru produce două fișiere: <strong>id_rsa.pub</strong> (cheie publică) și <strong>id_rsa</strong> (cheie privată).
+
+Rezultatul va fi ca în imaginea de mai jos:
+
+<a href="http://www.gnulinux.ro/wp-content/uploads/2015/11/ssh-keygen.jpg"><img class="aligncenter size-full wp-image-1486" src="http://www.gnulinux.ro/wp-content/uploads/2015/11/ssh-keygen.jpg" alt="ssh-keygen" width="720" height="462" /></a>
+
+După ce ați generat cheia SSH, copiați fișierul <strong>id_rsa.pub</strong> în calculatorul dumneavoastră folosind următoarea comandă:
+<pre><code>scp -P <em>yourport</em> ~/.ssh/id_rsa.pub <em>username@serverip</em>:~/.ssh</code></pre>
+„<em>yourport</em>” este numărul de port de la calculatorul dumneavoastră (implicit este 22), „<em>username</em>” este numele de utilizator pe care îl folosiți și „<em>serverip</em>” este adresa de ip al calculatorului.
+
+Pe calculatorul dumneavoastră schimbați numele fișierului și permisiunea.
+<pre><code>cat ~/.ssh/id_rsa.pub &gt;&gt; ~/.ssh/authorized_keys
+chmod 700 .ssh
+chmod 600 .ssh/authorized_keys
+rm .ssh/id_rsa.pub</code></pre>
+Testați dacă metoda de autentificare pe bază de cheie lucrează fără probleme încercând să vă conectați la calculatorul dumneavoastră din mașină client:
+<pre><code>ssh -P <em>yourport</em> <em>username@serverip</em></code></pre>
+Dacă ați reușit să vă conectați fără a introduce nici o parolă, înseamnă că această metodă merge fără probleme.
+<h2><strong>Securizare fișier SSH</strong></h2>
+Fișierul „<strong>/etc/ssh/sshd_config</strong>” este fișierul de configurare SSH la nivel de sistem care vă permite să setați diferite opțiuni pentru a îmbunătăți securitatea unui server SSH. Configurația implicită este foarte nesigură, așa că trebuie să editați fișierul mai întâi și să setați opțiunile corespunzătoare pentru a îmbunătăți securitatea.
+
+Pentru editarea fișierului,rulați comanda:
+<pre><code>sudo nano /etc/ssh/sshd_config</code></pre>
+<strong>Schimbare port de ascultare SSH</strong>
+
+În mod implicit, portul de ascultare SSH este 22. Atacatorii folosesc scanere de porturi pentru a vedea dacă un serviciu SSH este pornit sau nu. Este recomandat să schimbați portul implicit.
+
+Pentru a schimba portul implicit la 2200, trebuie să schimbați:
+<pre><code>Port 22</code></pre>
+la
+<pre><code>Port 2200</code></pre>
+<a href="http://www.gnulinux.ro/wp-content/uploads/2015/11/secure-ssh-change-port-number.png"><img class="aligncenter size-full wp-image-1517" src="http://www.gnulinux.ro/wp-content/uploads/2015/11/secure-ssh-change-port-number.png" alt="secure-ssh-change-port-number" width="429" height="172" /></a>
+
+<strong>Utilizați numai Protocolul 2</strong>
+
+Versiunea 1 din protocol conține vulnerabilități de securitate. Protocolul 2 este intrarea implicită în Ubuntu.
+
+Schimbați linia de mai jos:
+<pre><code>Protocol 2</code></pre>
+<strong>Setați limitarea accesului utilizatorilor</strong>
+
+Este necesar să se permită numai anumitor utilizatori conectare la SSH. În mod implicit, această opțiune nu este disponibilă în fișierul de configurare SSH.
+
+Pentru a seta permisiunile pentru anuniți utilizatori, adăugați următoarea linie (<em>user1</em>, <em>user2</em> se înlocuiește cu numele utilizatorilor):
+<pre><code>AllowUsers user1 user2</code></pre>
+Pentru a interzice conectarea la anumiți utilizatori, adăugați următoarea linie (<em>baduser1</em>, <em>baduser2</em> se înlocuiește cu numele utilizatorilor):
+<pre><code>DenyUser baduser1 baduser2</code></pre>
+<strong>Dezactivați autentificări ca root (administrator)</strong>
+
+Nu este necesar să vă autentificați ca root într-o rețea SSH. Se poate folosi <strong>su</strong> sau <strong>sudo</strong> pentru a obține acces la nivelul root. Cei mai mulți atacatori vor încerca să atace conturile root. Este un risc foarte mare ce ție de securitate și de aceea este recomandat să se interzică conectarea prin root.
+
+Pentru a dezactiva autentificarea prin root, dezactivați linia:
+<pre><code>PermitRootLogin without-password</code></pre>
+la
+<pre><code>PermitRootLogin no</code></pre>
+<a href="http://www.gnulinux.ro/wp-content/uploads/2015/11/secure-ssh-permit-root.png"><img class="aligncenter size-full wp-image-1523" src="http://www.gnulinux.ro/wp-content/uploads/2015/11/secure-ssh-permit-root.png" alt="secure-ssh-permit-root" width="513" height="236" /></a>
+
+<strong>Ascundeți informația ultimei autentificări</strong>
+
+Se poate ascunde informația despre ultima autentificare a unui utilizator. Pentru acest lucru, schimbați linia:
+<pre><code>PrintLastLog yes</code></pre>
+la
+<pre><code>PrintLastLog no</code></pre>
+<a href="http://www.gnulinux.ro/wp-content/uploads/2015/11/secure-ssh-last-log.png"><img class="aligncenter size-full wp-image-1525" src="http://www.gnulinux.ro/wp-content/uploads/2015/11/secure-ssh-last-log.png" alt="secure-ssh-last-log" width="365" height="181" /></a>
+
+<strong>Restricționați autentificare adreselor IP</strong>
+
+În mod implicit, rețeaua SSH este configurată pentru a permite autentificarea de la toate adresele IP. Este recomandat să se permită doar unei sau anumitor adrese IP conectarea la rețeaua SSH. Pentru acest lucru, schimbați linia:
+<pre><code>#ListenAddress ::</code></pre>
+la
+<pre><code>ListenAddress 192.168.1.20</code></pre>
+<a href="http://www.gnulinux.ro/wp-content/uploads/2015/11/secure-ssh-listen-address.png"><img class="aligncenter size-full wp-image-1527" src="http://www.gnulinux.ro/wp-content/uploads/2015/11/secure-ssh-listen-address.png" alt="secure-ssh-listen-address" width="501" height="160" /></a>
+
+<strong>Dezactivați fișierele .rhosts</strong>
+
+Fișierele .rhosts specifică ce utilizatorii au acces la comenzile <strong>r</strong> (<em>rsh</em>, <em>rcp</em>, <em>rlogin</em> etc.) de pe mașina locală fără o parolă. În mod implicit un fișier .rhost este dezactivat, dacă nu este dezactivat atunci modificați liniile următoare, așa cum sunt cele de mai jos:
+<pre><code>IgnoreRhosts yes
+RhostsAuthentication no
+RSAAuthentication yes</code></pre>
+<strong>Dezactivarea autentificări pe bază de gazdă</strong>
+
+Autentificarea SSH pe bază de gazdă este mai sigură decât autenntificarea rhost. Cu toate acestea, nu este recomandată această metodă. În mod implicit, această opțiune este dezactivată, dacă nu este dezactivată atunci modificați linia următoare, așa cum este cea de mai jos:
+<pre><code>HostbasedAuthentication no</code></pre>
+<strong>Setarea unui timp de grație pentru deconectare</strong>
+
+„LoginGraceTime” specifică intervalul de timp până când se va deconecta automat contul unui utilizator autentificat. Este recomandat să se seteze la 60 de secunde.
+
+Pentru acest lucru, schimbați linia:
+<pre><code>LoginGraceTime 120</code></pre>
+la
+<pre><code>LoginGraceTime 60</code></pre>
+<a href="http://www.gnulinux.ro/wp-content/uploads/2015/11/secure-ssh-login-gracetime.png"><img class="aligncenter size-full wp-image-1599" src="http://www.gnulinux.ro/wp-content/uploads/2015/11/secure-ssh-login-gracetime.png" alt="secure-ssh-login-gracetime" width="447" height="203" /></a>
+
+<strong>Setare unor conexiuni maxime</strong>
+
+Configurarea unui număr maxim de conexiuni la serviciul SSH pot fi de ajutor împotriva unui atac de forță brută. Schimbați linia:
+<pre><code>#MaxStartups 10:30:60</code></pre>
+la
+<pre><code>MaxStartups 2</code></pre>
+<a href="http://www.gnulinux.ro/wp-content/uploads/2015/11/secure-ssh-max-startup.png"><img class="aligncenter size-full wp-image-1602" src="http://www.gnulinux.ro/wp-content/uploads/2015/11/secure-ssh-max-startup.png" alt="secure-ssh-max-startup" width="486" height="175" /></a>
+
+<strong>Dezactivare redirecționare</strong>
+
+Tehnica portului de expediere este utilizată de atacatoripentru conexiune la rețeaua tunel printr-o sesiune SSH pentru a se conecta la sisteme. Este recomandat să se dezactiveze această opțiune.
+
+Schimbați linia
+<pre><code>X11Forwarding yes</code></pre>
+la
+<pre><code>X11Forwarding no</code></pre>
+<a href="http://www.gnulinux.ro/wp-content/uploads/2015/11/secure-ssh-x11forwarding.png"><img class="aligncenter size-full wp-image-1603" src="http://www.gnulinux.ro/wp-content/uploads/2015/11/secure-ssh-x11forwarding.png" alt="secure-ssh-x11forwarding" width="482" height="250" /></a>
+
+https://www.maketecheasier.com/secure-ssh-server-ubuntu/
